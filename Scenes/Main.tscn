@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3 uid="uid://campusdashmain"]
+
+[ext_resource type="Script" path="res://Scripts/CampusDashGame.cs" id="1_campus"]
+
+[node name="CampusDashGame" type="Node3D"]
+script = ExtResource("1_campus")
+
+[node name="FallbackHud" type="CanvasLayer" parent="."]
+
+[node name="Message" type="Label" parent="FallbackHud"]
+offset_left = 32.0
+offset_top = 32.0
+offset_right = 760.0
+offset_bottom = 132.0
+theme_override_font_sizes/font_size = 24
+text = "Campus Dash C# has not started. If this stays on screen, use Godot .NET and install the .NET 8 SDK, then check the Output panel for compile errors."
+autowrap_mode = 3

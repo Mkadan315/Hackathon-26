@@ -1,0 +1,32 @@
+# Godot editor cache and generated files
+.godot/
+.import/
+imported/
+*.tmp
+
+# C# / .NET build output
+.mono/
+bin/
+obj/
+
+# Local editor and IDE state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.csproj.DotSettings.user
+
+# Export presets can contain local paths or signing credentials.
+export_presets.cfg
+export.cfg
+
+
+# OS noise
+Thumbs.db
+Desktop.ini
+
+.nomedia
+*.translation
+data_*/
+mono_crash.*.json
