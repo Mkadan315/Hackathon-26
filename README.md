@@ -32,6 +32,7 @@ The prototype uses simple low-poly 3D pieces built in code: a student with a bac
 ## Third-party assets
 
 - `ThirdParty/Kenney/AnimatedCharacters3`: Kenney Animated Characters 3, CC0. Used as an optional player model if Godot imports the FBX successfully. Keep `License.txt` with the asset files.
+- `ThirdParty/Quaternius/HoodieCharacter`: Quaternius Hoodie Character from Poly Pizza, CC0. Kept as an experimental/reference model, but not loaded by default.
 
 ## Game concept
 
