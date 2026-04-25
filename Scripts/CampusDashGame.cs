@@ -52,8 +52,11 @@ public partial class CampusDashGame : Node3D
 	private Label _timeLabel = default!;
 	private Label _bestLabel = default!;
 	private Label _statusLabel = default!;
+	private Label _effectLabel = default!;
 	private Label _gameOverLabel = default!;
 	private MeshInstance3D _shieldVisual = default!;
+	private Node3D _playerModel = default!;
+	private bool _usingKenneyPlayerModel;
 
 	private int _currentLane = 1;
 	private float _scrollSpeed;
@@ -67,6 +70,7 @@ public partial class CampusDashGame : Node3D
 	private float _slowTimer;
 	private float _immuneTimer;
 	private bool _gameOver;
+	private bool _paused;
 	private int _laneMoveQueued;
 
 	public override void _Ready()
@@ -113,6 +117,10 @@ public partial class CampusDashGame : Node3D
 			{
 				RestartGame();
 			}
+			else if (key.Keycode == Key.P && !_gameOver)
+			{
+				_paused = !_paused;
+			}
 			else if (key.Keycode == Key.Escape)
 			{
 				GetTree().Quit();
@@ -131,6 +139,13 @@ public partial class CampusDashGame : Node3D
 				RestartGame();
 			}
 
+			_laneMoveQueued = 0;
+			UpdateHud();
+			return;
+		}
+
+		if (_paused)
+		{
 			_laneMoveQueued = 0;
 			UpdateHud();
 			return;
@@ -187,30 +202,38 @@ public partial class CampusDashGame : Node3D
 		_player = new Node3D { Name = "Student Player" };
 		AddChild(_player);
 
-		MeshInstance3D body = CreateMesh("Student Body", new CapsuleMesh { Radius = 0.38f, Height = 1.8f }, new Color(0.1f, 0.38f, 0.86f));
-		body.Position = new Vector3(0f, 0.9f, 0f);
-		_player.AddChild(body);
+		_usingKenneyPlayerModel = TryAddKenneyPlayerModel();
+		if (!_usingKenneyPlayerModel)
+		{
+			MeshInstance3D body = CreateMesh("Student Body", new CapsuleMesh { Radius = 0.38f, Height = 1.8f }, new Color(0.1f, 0.38f, 0.86f));
+			body.Position = new Vector3(0f, 0.9f, 0f);
+			_player.AddChild(body);
 
-		MeshInstance3D head = CreateMesh("Student Head", new SphereMesh { Radius = 0.28f, Height = 0.56f }, new Color(0.68f, 0.48f, 0.34f));
-		head.Position = new Vector3(0f, 1.88f, 0f);
-		_player.AddChild(head);
+			MeshInstance3D head = CreateMesh("Student Head", new SphereMesh { Radius = 0.28f, Height = 0.56f }, new Color(0.68f, 0.48f, 0.34f));
+			head.Position = new Vector3(0f, 1.88f, 0f);
+			_player.AddChild(head);
 
-		MeshInstance3D hair = CreateMesh("Student Hair", new SphereMesh { Radius = 0.29f, Height = 0.24f }, new Color(0.08f, 0.05f, 0.03f));
-		hair.Position = new Vector3(0f, 2.04f, -0.03f);
-		hair.Scale = new Vector3(1f, 0.45f, 1f);
-		_player.AddChild(hair);
+			MeshInstance3D hair = CreateMesh("Student Hair", new SphereMesh { Radius = 0.29f, Height = 0.24f }, new Color(0.08f, 0.05f, 0.03f));
+			hair.Position = new Vector3(0f, 2.04f, -0.03f);
+			hair.Scale = new Vector3(1f, 0.45f, 1f);
+			_player.AddChild(hair);
+		}
 
 		MeshInstance3D backpack = CreateMesh("Backpack", new BoxMesh { Size = new Vector3(0.6f, 0.7f, 0.2f) }, new Color(0.04f, 0.09f, 0.16f));
-		backpack.Position = new Vector3(0f, 0.9f, -0.48f);
+		backpack.Position = _usingKenneyPlayerModel ? new Vector3(0f, 0.86f, -0.28f) : new Vector3(0f, 0.9f, -0.48f);
+		backpack.Scale = _usingKenneyPlayerModel ? new Vector3(0.75f, 0.75f, 0.75f) : Vector3.One;
 		_player.AddChild(backpack);
 
-		MeshInstance3D leftLeg = CreateMesh("Left Sneaker", new BoxMesh { Size = new Vector3(0.24f, 0.14f, 0.52f) }, new Color(0.95f, 0.95f, 0.9f));
-		leftLeg.Position = new Vector3(-0.18f, 0.08f, 0.12f);
-		_player.AddChild(leftLeg);
+		if (!_usingKenneyPlayerModel)
+		{
+			MeshInstance3D leftLeg = CreateMesh("Left Sneaker", new BoxMesh { Size = new Vector3(0.24f, 0.14f, 0.52f) }, new Color(0.95f, 0.95f, 0.9f));
+			leftLeg.Position = new Vector3(-0.18f, 0.08f, 0.12f);
+			_player.AddChild(leftLeg);
 
-		MeshInstance3D rightLeg = CreateMesh("Right Sneaker", new BoxMesh { Size = new Vector3(0.24f, 0.14f, 0.52f) }, new Color(0.95f, 0.95f, 0.9f));
-		rightLeg.Position = new Vector3(0.18f, 0.08f, 0.12f);
-		_player.AddChild(rightLeg);
+			MeshInstance3D rightLeg = CreateMesh("Right Sneaker", new BoxMesh { Size = new Vector3(0.24f, 0.14f, 0.52f) }, new Color(0.95f, 0.95f, 0.9f));
+			rightLeg.Position = new Vector3(0.18f, 0.08f, 0.12f);
+			_player.AddChild(rightLeg);
+		}
 
 		_shieldVisual = CreateMesh("Shield Bubble", new SphereMesh { Radius = 1.1f, Height = 2.2f }, new Color(0.15f, 0.85f, 1f, 0.28f));
 		_shieldVisual.Position = new Vector3(0f, 0.9f, 0f);
@@ -274,6 +297,7 @@ public partial class CampusDashGame : Node3D
 		_timeLabel = CreateLabel("", 20, new Vector2(34f, 94f), new Vector2(330f, 28f), true);
 		_bestLabel = CreateLabel("", 16, new Vector2(34f, 124f), new Vector2(330f, 48f), false);
 		_statusLabel = CreateLabel("", 20, new Vector2(1000f, 26f), new Vector2(260f, 34f), true);
+		_effectLabel = CreateLabel("", 18, new Vector2(1000f, 58f), new Vector2(260f, 70f), true);
 		_gameOverLabel = CreateLabel("", 26, new Vector2(420f, 250f), new Vector2(480f, 210f), true);
 
 		canvas.AddChild(_titleLabel);
@@ -281,6 +305,7 @@ public partial class CampusDashGame : Node3D
 		canvas.AddChild(_timeLabel);
 		canvas.AddChild(_bestLabel);
 		canvas.AddChild(_statusLabel);
+		canvas.AddChild(_effectLabel);
 		canvas.AddChild(_gameOverLabel);
 	}
 
@@ -324,6 +349,7 @@ public partial class CampusDashGame : Node3D
 		_slowTimer = 0f;
 		_immuneTimer = 0f;
 		_gameOver = false;
+		_paused = false;
 		_player.Position = new Vector3(0f, 0f, 0f);
 		_shieldVisual.Visible = false;
 		_gameOverLabel.Text = "";
@@ -336,6 +362,12 @@ public partial class CampusDashGame : Node3D
 		Vector3 target = new(LaneToX(_currentLane), 0f, 0f);
 		_player.Position = _player.Position.Lerp(target, dt * LaneChangeSpeed);
 		_player.RotationDegrees = new Vector3(0f, Mathf.Sin((float)Time.GetTicksMsec() * 0.01f) * 4f, 0f);
+		if (_usingKenneyPlayerModel && _playerModel != null)
+		{
+			float runCycle = (float)Time.GetTicksMsec() * 0.012f;
+			_playerModel.Position = new Vector3(0f, 0.08f + Mathf.Abs(Mathf.Sin(runCycle)) * 0.05f, 0f);
+			_playerModel.RotationDegrees = new Vector3(0f, 180f, Mathf.Sin(runCycle) * 3f);
+		}
 	}
 
 	private void UpdateRunStats(float dt)
@@ -429,34 +461,12 @@ public partial class CampusDashGame : Node3D
 	private void SpawnPickup(int lane)
 	{
 		PickupKind kind = (PickupKind)_random.RandiRange(0, 3);
-		Mesh mesh;
-		Color color;
-
-		if (kind == PickupKind.EnergyDrink)
-		{
-			mesh = new CylinderMesh { TopRadius = 0.25f, BottomRadius = 0.25f, Height = 0.9f };
-			color = new Color(0.08f, 0.8f, 0.95f);
-		}
-		else if (kind == PickupKind.Snack)
-		{
-			mesh = new SphereMesh { Radius = 0.42f, Height = 0.84f };
-			color = new Color(0.96f, 0.75f, 0.19f);
-		}
-		else
-		{
-			mesh = new BoxMesh { Size = new Vector3(0.95f, 0.06f, 0.7f) };
-			color = kind == PickupKind.Homework ? Colors.White : new Color(0.9f, 0.88f, 0.78f);
-		}
-
 		Node3D body = new() { Name = kind.ToString() };
-		MeshInstance3D pickupMesh = CreateMesh(kind + " Model", mesh, color);
-		pickupMesh.Position = new Vector3(0f, 0f, 0f);
-		body.AddChild(pickupMesh);
 		body.Position = new Vector3(LaneToX(lane), 1.1f, SpawnZ);
 		AddPickupSprite(body, kind);
 		if (kind == PickupKind.Homework || kind == PickupKind.Project)
 		{
-			body.RotationDegrees = new Vector3(12f, 25f, 0f);
+			AddDebuffWarning(body);
 		}
 
 		AddChild(body);
@@ -577,16 +587,30 @@ public partial class CampusDashGame : Node3D
 		_timeLabel.Text = "Time: " + FormatTime(_runTime);
 		_bestLabel.Text = "Best Score: " + Mathf.FloorToInt(_bestScore) + "\nBest Time: " + FormatTime(_bestTime);
 
-		_statusLabel.Text = _immuneTimer > 0f
-			? "Shield: " + _immuneTimer.ToString("0.0") + "s"
-			: _buffTimer > 0f
-				? "Energy boost!"
-				: _slowTimer > 0f
-				? "Assignment drag!"
-				: "Lane: " + _laneNames[_currentLane];
+		_statusLabel.Text = "Lane: " + _laneNames[_currentLane];
+
+		string effects = "";
+		if (_immuneTimer > 0f)
+		{
+			effects += "Shield: " + _immuneTimer.ToString("0.0") + "s\n";
+		}
+
+		if (_buffTimer > 0f)
+		{
+			effects += "Energy score boost\n";
+		}
+
+		if (_slowTimer > 0f)
+		{
+			effects += "Debuff: score slowed " + _slowTimer.ToString("0.0") + "s";
+		}
+
+		_effectLabel.Text = effects.TrimEnd();
 
 		_gameOverLabel.Text = _gameOver
 			? "Game Over\nFinal Score: " + Mathf.FloorToInt(_score) + "\nSurvived: " + FormatTime(_runTime) + "\nPress an arrow key or R to restart."
+			: _paused
+			? "Paused\nPress P to resume."
 			: "";
 	}
 
@@ -632,6 +656,30 @@ public partial class CampusDashGame : Node3D
 		};
 	}
 
+	private bool TryAddKenneyPlayerModel()
+	{
+		PackedScene scene = GD.Load<PackedScene>("res://ThirdParty/Kenney/AnimatedCharacters3/Model/characterMedium.fbx");
+		if (scene == null)
+		{
+			return false;
+		}
+
+		Node instance = scene.Instantiate();
+		if (instance is not Node3D model)
+		{
+			instance.QueueFree();
+			return false;
+		}
+
+		model.Name = "Kenney Student Model";
+		model.Position = new Vector3(0f, 0.08f, 0f);
+		model.RotationDegrees = new Vector3(0f, 180f, 0f);
+		model.Scale = new Vector3(0.7f, 0.7f, 0.7f);
+		_player.AddChild(model);
+		_playerModel = model;
+		return true;
+	}
+
 	private static Node3D CreateCampusTile(int index)
 	{
 		Node3D tile = new() { Name = "Campus Hall Tile" };
@@ -650,19 +698,11 @@ public partial class CampusDashGame : Node3D
 		rightWall.Position = new Vector3(6.05f, 1.48f, 0f);
 		tile.AddChild(rightWall);
 
-		MeshInstance3D ceilingLight = CreateMesh("Ceiling Light", new BoxMesh { Size = new Vector3(2.1f, 0.08f, 0.75f) }, new Color(1f, 0.96f, 0.75f));
-		ceilingLight.Position = new Vector3(0f, 3.2f, -4.2f);
-		tile.AddChild(ceilingLight);
-
-		MeshInstance3D secondLight = CreateMesh("Ceiling Light", new BoxMesh { Size = new Vector3(2.1f, 0.08f, 0.75f) }, new Color(1f, 0.96f, 0.75f));
-		secondLight.Position = new Vector3(0f, 3.2f, 4.8f);
-		tile.AddChild(secondLight);
-
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 2; i++)
 		{
-			float z = -6f + i * 6f;
+			float z = -4.5f + i * 8f;
 			AddWallDetail(tile, new Vector3(-5.88f, 1.2f, z), true, i % 2 == 0);
-			AddWallDetail(tile, new Vector3(5.88f, 1.2f, z + 2f), false, i % 2 != 0);
+			AddWallDetail(tile, new Vector3(5.88f, 1.2f, z + 2.8f), false, i % 2 != 0);
 		}
 
 		return tile;
@@ -670,10 +710,10 @@ public partial class CampusDashGame : Node3D
 
 	private static void AddWallDetail(Node3D parent, Vector3 position, bool leftSide, bool isDoor)
 	{
-		Color color = isDoor ? new Color(0.48f, 0.32f, 0.18f) : new Color(0.16f, 0.34f, 0.62f);
+		Color color = isDoor ? new Color(0.46f, 0.32f, 0.22f) : new Color(0.58f, 0.68f, 0.78f);
 		MeshInstance3D detail = CreateMesh(
-			isDoor ? "Classroom Door" : "Locker Bank",
-			new BoxMesh { Size = isDoor ? new Vector3(0.08f, 1.8f, 1.2f) : new Vector3(0.08f, 1.35f, 1.55f) },
+			isDoor ? "Classroom Door" : "Hall Window",
+			new BoxMesh { Size = isDoor ? new Vector3(0.08f, 1.9f, 1.05f) : new Vector3(0.08f, 0.72f, 1.45f) },
 			color);
 
 		detail.Position = position;
@@ -682,8 +722,12 @@ public partial class CampusDashGame : Node3D
 		if (isDoor)
 		{
 			MeshInstance3D window = CreateMesh("Door Window", new BoxMesh { Size = new Vector3(0.09f, 0.42f, 0.42f) }, new Color(0.72f, 0.9f, 1f, 0.65f));
-			window.Position = position + new Vector3(leftSide ? 0.06f : -0.06f, 0.35f, 0f);
+			window.Position = position + new Vector3(leftSide ? 0.06f : -0.06f, 0.35f, 0.18f);
 			parent.AddChild(window);
+
+			MeshInstance3D handle = CreateMesh("Door Handle", new SphereMesh { Radius = 0.055f, Height = 0.11f }, new Color(0.95f, 0.78f, 0.26f));
+			handle.Position = position + new Vector3(leftSide ? 0.08f : -0.08f, -0.15f, -0.34f);
+			parent.AddChild(handle);
 		}
 	}
 
@@ -772,6 +816,19 @@ public partial class CampusDashGame : Node3D
 		};
 
 		parent.AddChild(sprite);
+	}
+
+	private static void AddDebuffWarning(Node3D parent)
+	{
+		MeshInstance3D warningBack = CreateMesh("Debuff Warning Back", new BoxMesh { Size = new Vector3(1.15f, 0.08f, 1.15f) }, new Color(0.95f, 0.12f, 0.12f, 0.85f));
+		warningBack.Position = new Vector3(0f, -0.08f, 0f);
+		warningBack.RotationDegrees = new Vector3(0f, 45f, 0f);
+		parent.AddChild(warningBack);
+
+		MeshInstance3D warningTop = CreateMesh("Debuff Warning Stripe", new BoxMesh { Size = new Vector3(0.18f, 0.1f, 1.35f) }, new Color(1f, 0.95f, 0.1f));
+		warningTop.Position = new Vector3(0f, -0.02f, 0f);
+		warningTop.RotationDegrees = new Vector3(0f, 45f, 0f);
+		parent.AddChild(warningTop);
 	}
 
 	private static float LaneToX(int lane)

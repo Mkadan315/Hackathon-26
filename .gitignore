@@ -26,6 +26,9 @@ export.cfg
 Thumbs.db
 Desktop.ini
 
+# Download archives; keep extracted assets and license files instead.
+*.zip
+
 .nomedia
 *.translation
 data_*/
