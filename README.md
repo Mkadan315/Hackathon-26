@@ -24,6 +24,10 @@ If you see only a gray screen, open the bottom **Output** or **Debugger** panel.
 
 The game creates the student, third-person camera, lanes, obstacles, buffs, debuffs, and scoreboard from one C# script.
 
+## Visual style
+
+The prototype uses simple low-poly 3D pieces built in code: a student with a backpack, a campus hallway, classroom doors, lockers, realistic desks, teaching assistants, professors, and 3D sprite icons for pickups.
+
 ## Game concept
 
 You are a student running through campus. Dodge desks, teaching assistants, and professors. Collect energy drinks and snacks. Avoid homework and projects. The game saves best score and best survival time locally.

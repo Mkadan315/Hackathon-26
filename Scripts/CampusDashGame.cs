@@ -41,7 +41,7 @@ public partial class CampusDashGame : Node3D
 	private const float DestroyZ = -13.0f;
 
 	private readonly List<RunObject> _runObjects = new();
-	private readonly List<MeshInstance3D> _floorTiles = new();
+	private readonly List<Node3D> _floorTiles = new();
 	private readonly string[] _laneNames = { "Right", "Middle", "Left" };
 	private readonly RandomNumberGenerator _random = new();
 
@@ -191,9 +191,26 @@ public partial class CampusDashGame : Node3D
 		body.Position = new Vector3(0f, 0.9f, 0f);
 		_player.AddChild(body);
 
+		MeshInstance3D head = CreateMesh("Student Head", new SphereMesh { Radius = 0.28f, Height = 0.56f }, new Color(0.68f, 0.48f, 0.34f));
+		head.Position = new Vector3(0f, 1.88f, 0f);
+		_player.AddChild(head);
+
+		MeshInstance3D hair = CreateMesh("Student Hair", new SphereMesh { Radius = 0.29f, Height = 0.24f }, new Color(0.08f, 0.05f, 0.03f));
+		hair.Position = new Vector3(0f, 2.04f, -0.03f);
+		hair.Scale = new Vector3(1f, 0.45f, 1f);
+		_player.AddChild(hair);
+
 		MeshInstance3D backpack = CreateMesh("Backpack", new BoxMesh { Size = new Vector3(0.6f, 0.7f, 0.2f) }, new Color(0.04f, 0.09f, 0.16f));
 		backpack.Position = new Vector3(0f, 0.9f, -0.48f);
 		_player.AddChild(backpack);
+
+		MeshInstance3D leftLeg = CreateMesh("Left Sneaker", new BoxMesh { Size = new Vector3(0.24f, 0.14f, 0.52f) }, new Color(0.95f, 0.95f, 0.9f));
+		leftLeg.Position = new Vector3(-0.18f, 0.08f, 0.12f);
+		_player.AddChild(leftLeg);
+
+		MeshInstance3D rightLeg = CreateMesh("Right Sneaker", new BoxMesh { Size = new Vector3(0.24f, 0.14f, 0.52f) }, new Color(0.95f, 0.95f, 0.9f));
+		rightLeg.Position = new Vector3(0.18f, 0.08f, 0.12f);
+		_player.AddChild(rightLeg);
 
 		_shieldVisual = CreateMesh("Shield Bubble", new SphereMesh { Radius = 1.1f, Height = 2.2f }, new Color(0.15f, 0.85f, 1f, 0.28f));
 		_shieldVisual.Position = new Vector3(0f, 0.9f, 0f);
@@ -219,11 +236,7 @@ public partial class CampusDashGame : Node3D
 	{
 		for (int i = 0; i < 5; i++)
 		{
-			MeshInstance3D tile = CreateMesh(
-				"Scrolling Campus Path",
-				new BoxMesh { Size = new Vector3(11.5f, 0.12f, 18f) },
-				i % 2 == 0 ? new Color(0.34f, 0.46f, 0.38f) : new Color(0.29f, 0.41f, 0.35f));
-
+			Node3D tile = CreateCampusTile(i);
 			tile.Position = new Vector3(0f, -0.08f, i * 18f);
 			AddChild(tile);
 			_floorTiles.Add(tile);
@@ -352,7 +365,7 @@ public partial class CampusDashGame : Node3D
 
 	private void UpdateFloor(float dt)
 	{
-		foreach (MeshInstance3D tile in _floorTiles)
+		foreach (Node3D tile in _floorTiles)
 		{
 			tile.Position += new Vector3(0f, 0f, -1f) * _scrollSpeed * dt;
 
@@ -395,28 +408,11 @@ public partial class CampusDashGame : Node3D
 	private void SpawnObstacle(int lane)
 	{
 		ObstacleKind kind = (ObstacleKind)_random.RandiRange(0, 2);
-		Mesh mesh;
-		Color color;
-		Vector3 position = new(LaneToX(lane), 0.7f, SpawnZ);
+		Node3D body = kind == ObstacleKind.Desk
+			? CreateDeskObstacle()
+			: CreateCampusPersonObstacle(kind);
 
-		if (kind == ObstacleKind.Desk)
-		{
-			mesh = new BoxMesh { Size = new Vector3(1.6f, 0.9f, 1f) };
-			color = new Color(0.56f, 0.32f, 0.16f);
-		}
-		else if (kind == ObstacleKind.TeachingAssistant)
-		{
-			mesh = new CapsuleMesh { Radius = 0.42f, Height = 1.7f };
-			color = new Color(0.75f, 0.24f, 0.22f);
-		}
-		else
-		{
-			mesh = new CapsuleMesh { Radius = 0.48f, Height = 1.95f };
-			color = new Color(0.45f, 0.24f, 0.68f);
-		}
-
-		MeshInstance3D body = CreateMesh(kind.ToString(), mesh, color);
-		body.Position = position;
+		body.Position = new Vector3(LaneToX(lane), 0f, SpawnZ);
 		AddChild(body);
 
 		_runObjects.Add(new RunObject
@@ -452,7 +448,10 @@ public partial class CampusDashGame : Node3D
 			color = kind == PickupKind.Homework ? Colors.White : new Color(0.9f, 0.88f, 0.78f);
 		}
 
-		MeshInstance3D body = CreateMesh(kind.ToString(), mesh, color);
+		Node3D body = new() { Name = kind.ToString() };
+		MeshInstance3D pickupMesh = CreateMesh(kind + " Model", mesh, color);
+		pickupMesh.Position = new Vector3(0f, 0f, 0f);
+		body.AddChild(pickupMesh);
 		body.Position = new Vector3(LaneToX(lane), 1.1f, SpawnZ);
 		AddPickupSprite(body, kind);
 		if (kind == PickupKind.Homework || kind == PickupKind.Project)
@@ -480,7 +479,10 @@ public partial class CampusDashGame : Node3D
 			RunObject runObject = _runObjects[i];
 			runObject.Z -= _scrollSpeed * dt;
 			runObject.Body.Position = new Vector3(LaneToX(runObject.Lane), runObject.Body.Position.Y, runObject.Z);
-			runObject.Body.RotateY(Mathf.DegToRad(runObject.IsObstacle ? 25f * dt : 115f * dt));
+			if (!runObject.IsObstacle)
+			{
+				runObject.Body.RotateY(Mathf.DegToRad(115f * dt));
+			}
 
 			if (runObject.Z < DestroyZ)
 			{
@@ -628,6 +630,126 @@ public partial class CampusDashGame : Node3D
 			Mesh = mesh,
 			MaterialOverride = material
 		};
+	}
+
+	private static Node3D CreateCampusTile(int index)
+	{
+		Node3D tile = new() { Name = "Campus Hall Tile" };
+
+		MeshInstance3D floor = CreateMesh(
+			"Polished Hall Floor",
+			new BoxMesh { Size = new Vector3(11.5f, 0.12f, 18f) },
+			index % 2 == 0 ? new Color(0.45f, 0.55f, 0.50f) : new Color(0.41f, 0.51f, 0.47f));
+		tile.AddChild(floor);
+
+		MeshInstance3D leftWall = CreateMesh("Left Classroom Wall", new BoxMesh { Size = new Vector3(0.24f, 3.2f, 18f) }, new Color(0.78f, 0.82f, 0.78f));
+		leftWall.Position = new Vector3(-6.05f, 1.48f, 0f);
+		tile.AddChild(leftWall);
+
+		MeshInstance3D rightWall = CreateMesh("Right Classroom Wall", new BoxMesh { Size = new Vector3(0.24f, 3.2f, 18f) }, new Color(0.78f, 0.82f, 0.78f));
+		rightWall.Position = new Vector3(6.05f, 1.48f, 0f);
+		tile.AddChild(rightWall);
+
+		MeshInstance3D ceilingLight = CreateMesh("Ceiling Light", new BoxMesh { Size = new Vector3(2.1f, 0.08f, 0.75f) }, new Color(1f, 0.96f, 0.75f));
+		ceilingLight.Position = new Vector3(0f, 3.2f, -4.2f);
+		tile.AddChild(ceilingLight);
+
+		MeshInstance3D secondLight = CreateMesh("Ceiling Light", new BoxMesh { Size = new Vector3(2.1f, 0.08f, 0.75f) }, new Color(1f, 0.96f, 0.75f));
+		secondLight.Position = new Vector3(0f, 3.2f, 4.8f);
+		tile.AddChild(secondLight);
+
+		for (int i = 0; i < 3; i++)
+		{
+			float z = -6f + i * 6f;
+			AddWallDetail(tile, new Vector3(-5.88f, 1.2f, z), true, i % 2 == 0);
+			AddWallDetail(tile, new Vector3(5.88f, 1.2f, z + 2f), false, i % 2 != 0);
+		}
+
+		return tile;
+	}
+
+	private static void AddWallDetail(Node3D parent, Vector3 position, bool leftSide, bool isDoor)
+	{
+		Color color = isDoor ? new Color(0.48f, 0.32f, 0.18f) : new Color(0.16f, 0.34f, 0.62f);
+		MeshInstance3D detail = CreateMesh(
+			isDoor ? "Classroom Door" : "Locker Bank",
+			new BoxMesh { Size = isDoor ? new Vector3(0.08f, 1.8f, 1.2f) : new Vector3(0.08f, 1.35f, 1.55f) },
+			color);
+
+		detail.Position = position;
+		parent.AddChild(detail);
+
+		if (isDoor)
+		{
+			MeshInstance3D window = CreateMesh("Door Window", new BoxMesh { Size = new Vector3(0.09f, 0.42f, 0.42f) }, new Color(0.72f, 0.9f, 1f, 0.65f));
+			window.Position = position + new Vector3(leftSide ? 0.06f : -0.06f, 0.35f, 0f);
+			parent.AddChild(window);
+		}
+	}
+
+	private static Node3D CreateDeskObstacle()
+	{
+		Node3D desk = new() { Name = "Desk Obstacle" };
+
+		MeshInstance3D top = CreateMesh("Desk Top", new BoxMesh { Size = new Vector3(1.7f, 0.18f, 1.05f) }, new Color(0.52f, 0.31f, 0.16f));
+		top.Position = new Vector3(0f, 0.82f, 0f);
+		desk.AddChild(top);
+
+		MeshInstance3D chair = CreateMesh("Chair Back", new BoxMesh { Size = new Vector3(1.0f, 0.9f, 0.15f) }, new Color(0.18f, 0.29f, 0.42f));
+		chair.Position = new Vector3(0f, 0.68f, -0.72f);
+		desk.AddChild(chair);
+
+		for (int x = -1; x <= 1; x += 2)
+		{
+			for (int z = -1; z <= 1; z += 2)
+			{
+				MeshInstance3D leg = CreateMesh("Desk Leg", new BoxMesh { Size = new Vector3(0.12f, 0.78f, 0.12f) }, new Color(0.22f, 0.22f, 0.22f));
+				leg.Position = new Vector3(x * 0.68f, 0.39f, z * 0.38f);
+				desk.AddChild(leg);
+			}
+		}
+
+		MeshInstance3D paper = CreateMesh("Loose Notes", new BoxMesh { Size = new Vector3(0.6f, 0.03f, 0.42f) }, Colors.White);
+		paper.Position = new Vector3(0.22f, 0.94f, 0.05f);
+		paper.RotationDegrees = new Vector3(0f, 18f, 0f);
+		desk.AddChild(paper);
+
+		return desk;
+	}
+
+	private static Node3D CreateCampusPersonObstacle(ObstacleKind kind)
+	{
+		bool professor = kind == ObstacleKind.Professor;
+		Node3D person = new() { Name = professor ? "Professor Obstacle" : "Teaching Assistant Obstacle" };
+		Color jacket = professor ? new Color(0.36f, 0.20f, 0.56f) : new Color(0.72f, 0.20f, 0.18f);
+
+		MeshInstance3D torso = CreateMesh("Torso", new CapsuleMesh { Radius = professor ? 0.46f : 0.40f, Height = professor ? 1.55f : 1.35f }, jacket);
+		torso.Position = new Vector3(0f, professor ? 1.0f : 0.88f, 0f);
+		person.AddChild(torso);
+
+		MeshInstance3D head = CreateMesh("Head", new SphereMesh { Radius = 0.28f, Height = 0.56f }, new Color(0.72f, 0.52f, 0.38f));
+		head.Position = new Vector3(0f, professor ? 1.9f : 1.65f, 0f);
+		person.AddChild(head);
+
+		MeshInstance3D hair = CreateMesh("Hair", new SphereMesh { Radius = 0.29f, Height = 0.2f }, professor ? new Color(0.72f, 0.72f, 0.68f) : new Color(0.08f, 0.06f, 0.04f));
+		hair.Position = head.Position + new Vector3(0f, 0.17f, -0.02f);
+		hair.Scale = new Vector3(1f, 0.45f, 1f);
+		person.AddChild(hair);
+
+		MeshInstance3D clipboard = CreateMesh("Clipboard", new BoxMesh { Size = new Vector3(0.48f, 0.06f, 0.68f) }, new Color(0.95f, 0.90f, 0.74f));
+		clipboard.Position = new Vector3(0.48f, 1.1f, 0.24f);
+		clipboard.RotationDegrees = new Vector3(20f, -12f, 12f);
+		person.AddChild(clipboard);
+
+		if (professor)
+		{
+			MeshInstance3D book = CreateMesh("Textbook", new BoxMesh { Size = new Vector3(0.58f, 0.16f, 0.42f) }, new Color(0.12f, 0.20f, 0.48f));
+			book.Position = new Vector3(-0.5f, 1.02f, 0.18f);
+			book.RotationDegrees = new Vector3(0f, 0f, -15f);
+			person.AddChild(book);
+		}
+
+		return person;
 	}
 
 	private static void AddPickupSprite(Node3D parent, PickupKind pickupKind)
